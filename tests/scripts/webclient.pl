@@ -23,6 +23,7 @@ use strict;
 use IO::Socket;
 use Getopt::Long;
 use Pod::Usage;
+use MIME::Base64;
 
 my $EOL = "\015\012";
 
@@ -34,6 +35,7 @@ my $method = "GET";
 my $dry_run = 0;
 my $help = 0;
 my $entity = undef;
+my $proxy_auth = undef;
 
 my $default_port = "80";
 my $port = $default_port;
@@ -43,7 +45,8 @@ sub process_options() {
 				"http-version=s" => \$http_version,
 				"method=s" => \$method,
 				"dry-run" => \$dry_run,
-				"entity=s" => \$entity);
+				"entity=s" => \$entity,
+				"proxy-auth=s" => \$proxy_auth);
 	die "Error reading cmdline options! $!" unless $result;
 
 	pod2usage(1) if $help;
@@ -52,9 +55,9 @@ sub process_options() {
 }
 
 
-sub build_request($$$$$$)
+sub build_request($$$$$$$)
 {
-	my ( $host, $port, $version, $method, $document, $entity ) = @_;
+	my ( $host, $port, $version, $method, $document, $entity, $proxy_auth ) = @_;
 	my $request = "";
 
 	$method = uc($method);
@@ -74,6 +77,10 @@ sub build_request($$$$$$)
 			 . "Connection: close$EOL";
 	} else {
 		die "invalid version '$version'";
+	}
+
+	if ($proxy_auth) {
+		$request .= "Proxy-Authorization: Basic " . encode_base64($proxy_auth, '') . $EOL;
 	}
 
 	$request .= $EOL;
@@ -102,7 +109,7 @@ if ($host =~ /^([^:]+):(.*)/) {
 }
 
 foreach my $document (@ARGV) {
-	my $request = build_request($host, $port, $http_version, $method, $document, $entity);
+	my $request = build_request($host, $port, $http_version, $method, $document, $entity, $proxy_auth);
 	if ($dry_run) {
 		print $request;
 		exit(0);
@@ -164,6 +171,11 @@ Specify the HTTP request method ('GET', 'CONNECT', ...). Default is 'GET'.
 =item B<--entity>
 
 Add the provided string as entity (i.e. body) to the request.
+
+=item B<--proxy-auth>
+
+Add a B<Proxy-Authorization: Basic> header using the provided "user:password"
+string.  This is useful for testing HTTP proxies that require authentication.
 
 =item B<--dry-run>
 
