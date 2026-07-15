@@ -174,7 +174,7 @@ wait_for_some_seconds() {
 }
 
 run_basic_webclient_request() {
-	"$WEBCLIENT_BIN" "$1" "$2" > "$WEBCLIENT_LOG" 2>&1
+	"$WEBCLIENT_BIN" "$@" > "$WEBCLIENT_LOG" 2>&1
 	WEBCLIENT_EXIT_CODE=$?
 	if test "$WEBCLIENT_EXIT_CODE" = "0" ; then
 		echo " ok"
@@ -192,7 +192,7 @@ run_failure_webclient_request() {
 	ec=$1
 	expected_error=$(($1 - 399))
 	shift
-	"$WEBCLIENT_BIN" "$1" "$2" "$3" "$4" > "$WEBCLIENT_LOG" 2>&1
+	"$WEBCLIENT_BIN" "$@" > "$WEBCLIENT_LOG" 2>&1
 	WEBCLIENT_EXIT_CODE=$?
 	if test "$WEBCLIENT_EXIT_CODE" = "$expected_error" ; then
 		echo " ok, got expected error code $ec"
@@ -252,10 +252,33 @@ run_failure_webclient_request 502 "$TINYPROXY_IP:$TINYPROXY_PORT" "http://bogus.
 test "$?" = "0" || FAILED=$((FAILED + 1))
 }
 
+basicauth_test() {
+printf "reconfiguring tinyproxy with BasicAuth..."
+cat >> "$TINYPROXY_CONF_FILE" <<'EOF'
+BasicAuth testuser1 testpass1
+BasicAuth testuser2 testpass2
+EOF
+reload_config
+wait_for_some_seconds 1
+
+printf "testing proxy access with first BasicAuth user..."
+run_basic_webclient_request --proxy-auth="testuser1:testpass1" "$TINYPROXY_IP:$TINYPROXY_PORT" "http://$WEBSERVER_IP:$WEBSERVER_PORT/"
+test "$?" = "0" || FAILED=$((FAILED + 1))
+
+printf "testing proxy access with second BasicAuth user..."
+run_basic_webclient_request --proxy-auth="testuser2:testpass2" "$TINYPROXY_IP:$TINYPROXY_PORT" "http://$WEBSERVER_IP:$WEBSERVER_PORT/"
+test "$?" = "0" || FAILED=$((FAILED + 1))
+
+printf "testing proxy access with invalid BasicAuth user..."
+run_failure_webclient_request 407 --proxy-auth="baduser:badpass" "$TINYPROXY_IP:$TINYPROXY_PORT" "http://$WEBSERVER_IP:$WEBSERVER_PORT/"
+test "$?" = "0" || FAILED=$((FAILED + 1))
+}
+
 basic_test
 reload_config
 basic_test
 ext_test
+basicauth_test
 
 echo "$FAILED errors"
 

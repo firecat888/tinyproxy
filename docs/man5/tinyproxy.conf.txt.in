@@ -239,9 +239,12 @@ the service considerably.
 
 Configure HTTP "Basic Authentication" username and password
 for accessing the proxy.  If there are any entries specified,
-access is only granted for authenticated users.
+access is only granted for authenticated users.  Multiple
+B<BasicAuth> directives may be given to allow more than one
+user/password pair.
 
-    BasicAuth user password
+    BasicAuth user1 password1
+    BasicAuth user2 password2
 
 =item B<BasicAuthRealm>
 

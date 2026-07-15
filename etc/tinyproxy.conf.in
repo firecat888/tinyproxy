@@ -202,8 +202,10 @@ Allow ::1
 
 # BasicAuth: HTTP "Basic Authentication" for accessing the proxy.
 # If there are any entries specified, access is only granted for authenticated
-# users.
-#BasicAuth user password
+# users.  Multiple BasicAuth lines may be specified to allow more than one
+# user/password pair.
+#BasicAuth user1 password1
+#BasicAuth user2 password2
 
 # BasicAuthRealm : In case BasicAuth is configured, the "realm" information.
 # "Proxy Authentication Required" status http 407 "error-response" can be
